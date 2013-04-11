@@ -9,7 +9,7 @@
 #include <fstream>
 using namespace std;
 
-#define MAX_THREADS 1 //Create one thread per processor
+#define MAX_THREADS 2 //Create one thread per processor
 
 extern HANDLE events[MAX_THREADS];
 

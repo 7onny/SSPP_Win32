@@ -85,7 +85,7 @@ void MT_calc_vels(float vels[PIC_X][PIC_Y][2],float vels1[PIC_X][PIC_Y][2],float
 
 	printf("****** Computing Velocity ******\n"); 
 	fflush(stdout);
-	vels_avg(vels1,ave);
+	MT_vels_avg(vels1,ave,id);
 	WaitForSingleObject(events[id],INFINITE);
 
 	for(i=startx;i<=endx;i+=(MAX_THREADS*step))
@@ -153,7 +153,7 @@ void MT_calc_statistics(float correct_vels[PIC_X][PIC_Y][2],int int_size_x,int i
 	(*max_angle) = maxA =-HUGE;
 	(*ave_error) = (*st_dev) = (*density) = av_error = 0.0;
 
-	for(int i=n;i<pic_x-n;i++)
+	for(int i=n;i<pic_x-n;i+=MAX_THREADS)
 	{
 		for(int j=n;j<pic_y-n;j++)
 		{
