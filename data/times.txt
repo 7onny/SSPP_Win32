@@ -1,27 +1,27 @@
 
 --------------Execution Times (seconds)--------------------
-Total Elapsed time: 0.635603
+Total Elapsed time: 0.706789
 Total Function times:
 	calcIx: 0
 	calcIy: 0
 	calcIt: 0
-	vels_avg: 0.0552192
-	calc_vels: 0.144418
+	vels_avg: 0.0412494
+	calc_vels: 0.0581468
 	print_ders: 0
-	compute_ders: 0.00628875
-	calc_diff_kernel: 4.52914e-007
-	diff_x: 0.00060238
-	diff_y: 0.000594227
-	diff_t: 0.000550294
-	readfiles: 0.0109733
+	compute_ders: 0.00820369
+	calc_diff_kernel: 4.52916e-007
+	diff_x: 0.00159608
+	diff_y: 0.000931197
+	diff_t: 0.00077947
+	readfiles: 0.0096195
 	writefiles: 0
-	read_and_smooth3D: 0.0436109
-	convolve_Gaussian: 0.0259562
-	output_velocities: 0.0077793
-	calc_statistics: 0.590927
-	PsiER: 0.50389
-	norm: 0.136605
-	difference: 0.0489304
-	threshold: 0.00048915
+	read_and_smooth3D: 0.0464779
+	convolve_Gaussian: 0.0291035
+	output_velocities: 0.00438061
+	calc_statistics: 0.323656
+	PsiER: 0.412996
+	norm: 0.113336
+	difference: 0.0686595
+	threshold: 0.000301643
 	fmin: 0
-	rearrange: 0.204709
+	rearrange: 0.134634

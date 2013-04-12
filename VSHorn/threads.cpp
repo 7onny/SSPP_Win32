@@ -7,56 +7,76 @@ UINT thread_proc(LPVOID data){
 	int id=td->current_id; //IDs will range from 0 to MAX_THREADS-1
 	InterlockedIncrement((LPLONG)&(td->current_id));
 	createEvents();
+
+	//Time measurement data (Only used if TIME == 1)
+	double MT_vels_avg_times[MAX_THREADS];
+	double MT_calc_vels_times[MAX_THREADS];
+	double MT_rearrange_times[MAX_THREADS];
+	double MT_calc_statistics_times[MAX_THREADS];
+	if(TIME){
+		for(int i=0; i<MAX_THREADS; ++i){
+			MT_vels_avg_times[i]=MT_calc_vels_times[i]=MT_rearrange_times[i]=MT_calc_statistics_times[i]=0.0;
+		}
+	}
+
+	//Main Loop
 	for(int i=0;i<td->numpass;i+=2) 
 	{
 		printf("%3dth iteration\n",i);
 		fflush(stdout);
 		
-		MT_calc_vels(full_vels,full_vels1,Ix,Iy,It,id);
+		MT_calc_vels(full_vels,full_vels1,Ix,Iy,It,id,MT_vels_avg_times,MT_calc_vels_times);
 		WaitForSingleObject(events[id],INFINITE);
 
 		printf("The improvement: %f\n",difference(full_vels,full_vels1,pic_x,pic_y));
 		fflush(stdout);
 		
-		MT_rearrange(full_vels1,temp_vels,id);
+		MT_rearrange(full_vels1,temp_vels,id,MT_rearrange_times);
 		WaitForSingleObject(events[id],INFINITE);
 
-		MT_calc_statistics(correct_vels,int_size_x,int_size_y,temp_vels,
-			pic_x,pic_y,2*(td->offset),&(td->ave_error),&(td->st_dev),&(td->density),&(td->min_angle),&(td->max_angle),id,td);
+		MT_calc_statistics(correct_vels,int_size_x,int_size_y,temp_vels,pic_x,pic_y,2*(td->offset),id,td,MT_calc_statistics_times);
 		WaitForSingleObject(events[id],INFINITE);
 
 		printf("Error: %f St Dev: %f Density: %f\n",td->ave_error,td->st_dev,td->density);
 		fflush(stdout);
 		printf("%3dth iteration\n",i+1);
 		
-		MT_calc_vels(full_vels1,full_vels,Ix,Iy,It,id);
+		MT_calc_vels(full_vels1,full_vels,Ix,Iy,It,id,MT_vels_avg_times,MT_calc_vels_times);
 		WaitForSingleObject(events[id],INFINITE);
 
 		printf("The improvement: %f\n",difference(full_vels,full_vels1,pic_x,pic_y));
 		
-		MT_rearrange(full_vels,temp_vels,id);
+		MT_rearrange(full_vels,temp_vels,id,MT_rearrange_times);
 		WaitForSingleObject(events[id],INFINITE);
 
-		MT_calc_statistics(correct_vels,int_size_x,int_size_y,temp_vels,
-			pic_x,pic_y,2*(td->offset),&(td->ave_error),&(td->st_dev),&(td->density),&(td->min_angle),&(td->max_angle),id,td);
+		MT_calc_statistics(correct_vels,int_size_x,int_size_y,temp_vels,pic_x,pic_y,2*(td->offset),id,td,MT_calc_statistics_times);
 		WaitForSingleObject(events[id],INFINITE);
 
 		printf("Error: %f St Dev: %f Density: %f\n",td->ave_error,td->st_dev,td->density);
 		fflush(stdout);
 	}
+
 	closeEvents();
+	if(TIME && id==MAX_THREADS-1){
+		for(int i=0; i<MAX_THREADS; ++i){
+			vels_avg_time+=MT_vels_avg_times[i];
+			calc_vels_time+=MT_calc_vels_times[i];
+			rearrange_time+=MT_rearrange_times[i];
+			calc_statistics_time+=MT_calc_statistics_times[i];
+		}
+	}
 	return 0;
 }
 
 //----------------------------------Parallelized functions---------------------------------------
-void MT_vels_avg(float vels[PIC_X][PIC_Y][2],float ave[PIC_X][PIC_Y][2], int id)
+void MT_vels_avg(float vels[PIC_X][PIC_Y][2],float ave[PIC_X][PIC_Y][2], int id,double *times)
 	//float vels[PIC_X][PIC_Y][2],ave[PIC_X][PIC_Y][2];
 {
 	double launch_time=omp_get_wtime();
 	InterlockedIncrement((LPLONG)&vels_avg_count);
 
 	int i,j;
-	for(i=startx;i<endx;i+=MAX_THREADS)
+	for(i=startx+id;i<endx;i+=MAX_THREADS)
 		for(j=starty;j<endy;j++)
 		{
 			ave[i][j][0] = (vels[i-1][j][0]+vels[i][j+1][0]+
@@ -68,12 +88,16 @@ void MT_vels_avg(float vels[PIC_X][PIC_Y][2],float ave[PIC_X][PIC_Y][2], int id)
 				(vels[i-1][j-1][1]+vels[i-1][j+1][1]+
 				vels[i+1][j+1][1]+vels[i+1][j-1][1])/12.0;
 		}
-	double end_time=omp_get_wtime();
-	vels_avg_time+=end_time-launch_time;
+
+	if(TIME){	//Time measurement enabled
+		double time=omp_get_wtime();
+		time=time-launch_time;
+		times[id]=times[id]+time;
+	}
 	SetEvent(events[id]);
 }
 
-void MT_calc_vels(float vels[PIC_X][PIC_Y][2],float vels1[PIC_X][PIC_Y][2],float Ex[PIC_X][PIC_Y],float Ey[PIC_X][PIC_Y],float Et[PIC_X][PIC_Y], int id)
+void MT_calc_vels(float vels[PIC_X][PIC_Y][2],float vels1[PIC_X][PIC_Y][2],float Ex[PIC_X][PIC_Y],float Ey[PIC_X][PIC_Y],float Et[PIC_X][PIC_Y], int id,double *aux_times,double *times)
 	//float vels[PIC_X][PIC_Y][2],vels1[PIC_X][PIC_Y][2];
 	//float Ex[PIC_X][PIC_Y],Ey[PIC_X][PIC_Y],Et[PIC_X][PIC_Y];
 {
@@ -83,12 +107,14 @@ void MT_calc_vels(float vels[PIC_X][PIC_Y][2],float vels1[PIC_X][PIC_Y][2],float
 	int i,j,k;
 	float mag,ave[PIC_X][PIC_Y][2];
 
-	printf("****** Computing Velocity ******\n"); 
-	fflush(stdout);
-	MT_vels_avg(vels1,ave,id);
+	if(id==0) {
+		printf("****** Computing Velocity ******\n"); 
+		fflush(stdout);
+	}
+	MT_vels_avg(vels1,ave,id,aux_times);
 	WaitForSingleObject(events[id],INFINITE);
 
-	for(i=startx;i<=endx;i+=(MAX_THREADS*step))
+	for(i=startx+id;i<=endx;i+=(MAX_THREADS*step))
 		for(j=starty;j<=endy;j+=step) 
 		{
 			vels[i][j][0] = ave[i][j][0]-Ex[i][j]*
@@ -103,19 +129,23 @@ void MT_calc_vels(float vels[PIC_X][PIC_Y][2],float vels1[PIC_X][PIC_Y][2],float
 				printf("Velocity magnitude of %f at %d %d is over 5.0\n",mag,i,j) ;
 			}
 		}
-	double end_time=omp_get_wtime();
-	calc_vels_time+=end_time-launch_time;
+
+	if(TIME){	//Time measurement enabled
+		double time=omp_get_wtime();
+		time=time-launch_time;
+		times[id]=times[id]+time;
+	}
 	SetEvent(events[id]);
 }
 
-void MT_rearrange(float v1[PIC_X][PIC_Y][2],float v2[PIC_X][PIC_Y][2], int id)
+void MT_rearrange(float v1[PIC_X][PIC_Y][2],float v2[PIC_X][PIC_Y][2], int id,double times[MAX_THREADS])
 	//float v1[PIC_X][PIC_Y][2],v2[PIC_X][PIC_Y][2];
 {
 	double launch_time=omp_get_wtime();
 	InterlockedIncrement((LPLONG)&rearrange_count);
 
 	int i,j;
-	for(i=0;i<PIC_X;i+=MAX_THREADS)
+	for(i=id;i<PIC_X;i+=MAX_THREADS)
 		for(j=0;j<PIC_Y;j++)
 		{
 			if(v1[i][j][0] != NO_VALUE && v1[i][j][1] != NO_VALUE)
@@ -129,16 +159,17 @@ void MT_rearrange(float v1[PIC_X][PIC_Y][2],float v2[PIC_X][PIC_Y][2], int id)
 				v2[i][j][1] = NO_VALUE;
 			}
 		}
-	double end_time=omp_get_wtime();
-	rearrange_time+=end_time-launch_time;
+
+	if(TIME){	//Time measurement enabled
+		double time=omp_get_wtime();
+		time=time-launch_time;
+		times[id]=times[id]+time;
+	}
 	SetEvent(events[id]);
 }
 
 void MT_calc_statistics(float correct_vels[PIC_X][PIC_Y][2],int int_size_x,int int_size_y,float full_vels[PIC_X][PIC_Y][2],
-					 int pic_x,int pic_y,int n,float *ave_error,float *st_dev,float *density,float *min_angle,float *max_angle, int id, LPVOID data)
-					 //float full_vels[PIC_X][PIC_Y][2],*ave_error,*density,*st_dev;
-					 //float correct_vels[PIC_X][PIC_Y][2],*min_angle,*max_angle;
-					 //int n,pic_x,pic_y,int_size_x,int_size_y;
+					 int pic_x,int pic_y,int n,int id, LPVOID data,double times[MAX_THREADS])					
 {
 	double launch_time=omp_get_wtime();
 	InterlockedIncrement((LPLONG)&calc_statistics_count);
@@ -149,11 +180,9 @@ void MT_calc_statistics(float correct_vels[PIC_X][PIC_Y][2],int int_size_x,int i
 	int full_count,no_full_count,total_count;
 	float sumX2,temp,uva[2],uve[2],minA,maxA,av_error;
 	
-	(*min_angle) = minA = HUGE;
-	(*max_angle) = maxA =-HUGE;
-	(*ave_error) = (*st_dev) = (*density) = av_error = 0.0;
+	resetThreadData(data);
 
-	for(int i=n;i<pic_x-n;i+=MAX_THREADS)
+	for(int i=n+id;i<pic_x-n;i+=MAX_THREADS)
 	{
 		for(int j=n;j<pic_y-n;j++)
 		{
@@ -180,26 +209,26 @@ void MT_calc_statistics(float correct_vels[PIC_X][PIC_Y][2],int int_size_x,int i
 		td->no_full_count+=no_full_count;
 		td->total_count+=total_count;
 		td->sumX2+=sumX2;
-		(*ave_error)+=av_error;
-		if(minA < (*min_angle)) (*min_angle) = minA;
-		if(maxA > (*max_angle)) (*max_angle) = maxA;
+		(td->ave_error)+=av_error;
+		if(minA < (td->min_angle)) (td->min_angle) = minA;
+		if(maxA > (td->max_angle)) (td->max_angle) = maxA;
 		lock.Unlock();
 	}
 	int finished_threads=InterlockedIncrement((LPLONG)&(td->finish_counter));
 
 	//Final
 	if(finished_threads==MAX_THREADS){ //When all threads are done working proceed to print results
-		if(td->full_count != 0) (*ave_error) = (*ave_error)/td->full_count;
-		else (*ave_error) = 0.0;
+		if(td->full_count != 0) td->ave_error = (td->ave_error)/td->full_count;
+		else (td->ave_error) = 0.0;
 		if(td->full_count > 1) 
 		{
-			temp = fabs((td->sumX2 - td->full_count*(*ave_error)*(*ave_error))/(td->full_count-1));
-			(*st_dev) = sqrt(temp);
+			temp = fabs((td->sumX2 - td->full_count*(td->ave_error)*(td->ave_error))/(td->full_count-1));
+			(td->st_dev) = sqrt(temp);
 		}
-		else (*st_dev) = 0.0;
-		(*density) = td->full_count*100.0/(td->total_count*1.0);
+		else (td->st_dev) = 0.0;
+		(td->density) = td->full_count*100.0/(td->total_count*1.0);
 
-		if((*ave_error) == 0.0) { (*min_angle) = (*max_angle) = 0.0; }
+		if((td->ave_error) == 0.0) { (td->min_angle) = (td->max_angle) = 0.0; }
 
 		if(FALSE)
 		{
@@ -211,8 +240,11 @@ void MT_calc_statistics(float correct_vels[PIC_X][PIC_Y][2],int int_size_x,int i
 		}
 	}
 
-	double end_time=omp_get_wtime();
-	calc_statistics_time+=end_time-launch_time;
+	if(TIME){	//Time measurement enabled
+		double time=omp_get_wtime();
+		time=time-launch_time;
+		times[id]=times[id]+time;
+	}
 	SetEvent(events[id]);
 }
 

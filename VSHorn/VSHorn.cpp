@@ -406,7 +406,7 @@ int main(int argc, char **argv)
 		program_finish_time=omp_get_wtime();
 		cout<<endl<<(program_finish_time-program_start_time)<<endl;
 		print_times(program_finish_time-program_start_time);
-		print_plot_data();
+		if(TIME) print_plot_data();
 		//system("pause");
 
 		return 0;
@@ -419,30 +419,31 @@ void print_times(double total_elapsed_time){
 	out<<"\n--------------Execution Times (seconds)--------------------"<<endl;
 	out<<"Total Elapsed time: "<<total_elapsed_time<<endl;
 	out<<"Total Function times:"<<endl;
-	out<<"\tcalcIx: "<<calcIx_time<<endl;
-	out<<"\tcalcIy: "<<calcIy_time<<endl;
-	out<<"\tcalcIt: "<<calcIt_time<<endl;
-	out<<"\tvels_avg: "<< vels_avg_time<<endl;
-	out<<"\tcalc_vels: "<< calc_vels_time<<endl;
-	out<<"\tprint_ders: "<< print_ders_time<<endl;
-	out<<"\tcompute_ders: "<< compute_ders_time<<endl;
-	out<<"\tcalc_diff_kernel: "<< calc_diff_kernel_time<<endl;
-	out<<"\tdiff_x: "<< diff_x_time<<endl;
-	out<<"\tdiff_y: "<< diff_y_time<<endl;
-	out<<"\tdiff_t: "<< diff_t_time<<endl;
-	out<<"\treadfiles: "<< readfiles_time<<endl;
-	out<<"\twritefiles: "<< writefiles_time<<endl;
-	out<<"\tread_and_smooth3D: "<<read_and_smooth3D_time<<endl;
-	out<<"\tconvolve_Gaussian: "<< convolve_Gaussian_time<<endl;
-	out<<"\toutput_velocities: "<< output_velocities_time<<endl;
-	out<<"\tcalc_statistics: "<< calc_statistics_time<<endl;
-	out<<"\tPsiER: "<< PsiER_time<<endl;
-	out<<"\tnorm: "<< norm_time<<endl;
-	out<<"\tdifference: "<< difference_time<<endl;
-	out<<"\tthreshold: "<< threshold_time<<endl;
-	out<<"\tfmin: "<< fmin_time<<endl;
-	out<<"\trearrange: "<< rearrange_time<<endl;
-
+	if(TIME){
+		out<<"\tcalcIx: "<<calcIx_time<<endl;
+		out<<"\tcalcIy: "<<calcIy_time<<endl;
+		out<<"\tcalcIt: "<<calcIt_time<<endl;
+		out<<"\tvels_avg: "<< vels_avg_time<<endl;
+		out<<"\tcalc_vels: "<< calc_vels_time<<endl;
+		out<<"\tprint_ders: "<< print_ders_time<<endl;
+		out<<"\tcompute_ders: "<< compute_ders_time<<endl;
+		out<<"\tcalc_diff_kernel: "<< calc_diff_kernel_time<<endl;
+		out<<"\tdiff_x: "<< diff_x_time<<endl;
+		out<<"\tdiff_y: "<< diff_y_time<<endl;
+		out<<"\tdiff_t: "<< diff_t_time<<endl;
+		out<<"\treadfiles: "<< readfiles_time<<endl;
+		out<<"\twritefiles: "<< writefiles_time<<endl;
+		out<<"\tread_and_smooth3D: "<<read_and_smooth3D_time<<endl;
+		out<<"\tconvolve_Gaussian: "<< convolve_Gaussian_time<<endl;
+		out<<"\toutput_velocities: "<< output_velocities_time<<endl;
+		out<<"\tcalc_statistics: "<< calc_statistics_time<<endl;
+		out<<"\tPsiER: "<< PsiER_time<<endl;
+		out<<"\tnorm: "<< norm_time<<endl;
+		out<<"\tdifference: "<< difference_time<<endl;
+		out<<"\tthreshold: "<< threshold_time<<endl;
+		out<<"\tfmin: "<< fmin_time<<endl;
+		out<<"\trearrange: "<< rearrange_time<<endl;
+	}
 	out.close();
 }
 

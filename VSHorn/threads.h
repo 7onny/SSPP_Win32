@@ -10,6 +10,7 @@
 using namespace std;
 
 #define MAX_THREADS 2 //Create one thread per processor
+#define TIME 1 //Turn off/on(0,1) time measurement for individual functions (slower execution time) 
 
 extern HANDLE events[MAX_THREADS];
 
@@ -37,11 +38,12 @@ typedef struct{
 } threadData;
 
 //Parallelized functions
-void MT_vels_avg(float vels[PIC_X][PIC_Y][2],float ave[PIC_X][PIC_Y][2], int id);
-void MT_calc_vels(float vels[PIC_X][PIC_Y][2],float vels1[PIC_X][PIC_Y][2],float Ex[PIC_X][PIC_Y],float Ey[PIC_X][PIC_Y],float Et[PIC_X][PIC_Y], int id);
-void MT_rearrange(float v1[PIC_X][PIC_Y][2],float v2[PIC_X][PIC_Y][2], int id);
+void MT_vels_avg(float vels[PIC_X][PIC_Y][2],float ave[PIC_X][PIC_Y][2], int id,double *times);
+void MT_calc_vels(float vels[PIC_X][PIC_Y][2],float vels1[PIC_X][PIC_Y][2],float Ex[PIC_X][PIC_Y],float Ey[PIC_X][PIC_Y],
+				  float Et[PIC_X][PIC_Y], int id, double *aux_times, double *times);
+void MT_rearrange(float v1[PIC_X][PIC_Y][2],float v2[PIC_X][PIC_Y][2], int id,double times[MAX_THREADS]);
 void MT_calc_statistics(float correct_vels[PIC_X][PIC_Y][2],int int_size_x,int int_size_y,float full_vels[PIC_X][PIC_Y][2],
-						int pic_x,int pic_y,int n,float *ave_error,float *st_dev,float *density,float *min_angle,float *max_angle, int id, LPVOID data);
+						int pic_x,int pic_y,int n,int id, LPVOID data,double times[MAX_THREADS]);
 
 //Utility functions
 void createEvents();
